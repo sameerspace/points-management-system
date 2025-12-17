@@ -32,22 +32,51 @@ export class PointsService {
       (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
     );
 
+    const transactionAvailable: number[] = sortedTransactions.map((t) =>
+      t.points > 0 ? t.points : 0,
+    );
+
+    // Process negative transactions to reduce available points from earlier transactions
+    for (let i = 0; i < sortedTransactions.length; i++) {
+      const transaction = sortedTransactions[i];
+      if (transaction.points < 0) {
+        let remainingNegative = -transaction.points;
+        // Reduce from oldest transactions of the same payer first
+        for (let j = 0; j < i && remainingNegative > 0; j++) {
+          if (sortedTransactions[j].payer === transaction.payer) {
+            const reduction = Math.min(
+              transactionAvailable[j],
+              remainingNegative,
+            );
+            transactionAvailable[j] -= reduction;
+            remainingNegative -= reduction;
+          }
+        }
+      }
+    }
+
+    // Now spend from oldest transactions first
     let remainingToSpend = pointsToSpend;
     const payerSpending: Map<string, number> = new Map();
 
-    for (const transaction of sortedTransactions) {
-      if (remainingToSpend === 0) break;
+    for (
+      let i = 0;
+      i < sortedTransactions.length && remainingToSpend > 0;
+      i++
+    ) {
+      const transaction = sortedTransactions[i];
+      const available = transactionAvailable[i];
 
-      const payer = transaction.payer;
-      const availablePoints = transaction.points;
+      if (available > 0) {
+        const payer = transaction.payer;
+        const currentBalance = this.getPayerBalance(payer);
+        const pointsToDeduct = Math.min(
+          available,
+          remainingToSpend,
+          currentBalance,
+        );
 
-      const pointsToDeduct = Math.min(availablePoints, remainingToSpend);
-
-      if (pointsToDeduct > 0) {
-        const currentPayerBalance = this.getPayerBalance(payer);
-        const newBalance = currentPayerBalance - pointsToDeduct;
-
-        if (newBalance >= 0) {
+        if (pointsToDeduct > 0) {
           payerSpending.set(
             payer,
             (payerSpending.get(payer) || 0) - pointsToDeduct,
@@ -75,7 +104,6 @@ export class PointsService {
   getBalances(): Record<string, number> {
     const balances: Record<string, number> = {};
 
-    // Sum up all transactions per payer
     for (const transaction of this.transactions) {
       const payer = transaction.payer;
       balances[payer] = (balances[payer] || 0) + transaction.points;

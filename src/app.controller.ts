@@ -8,7 +8,7 @@ import { ApiHealthCheck } from './app/decorators/health-check.decorator';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
+  @Get('/')
   @ApiHealthCheck()
   getHello(): string {
     return this.appService.getHello();

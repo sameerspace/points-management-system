@@ -36,12 +36,10 @@ export class PointsService {
       t.points > 0 ? t.points : 0,
     );
 
-    // Process negative transactions to reduce available points from earlier transactions
     for (let i = 0; i < sortedTransactions.length; i++) {
       const transaction = sortedTransactions[i];
       if (transaction.points < 0) {
         let remainingNegative = -transaction.points;
-        // Reduce from oldest transactions of the same payer first
         for (let j = 0; j < i && remainingNegative > 0; j++) {
           if (sortedTransactions[j].payer === transaction.payer) {
             const reduction = Math.min(
@@ -55,7 +53,6 @@ export class PointsService {
       }
     }
 
-    // Now spend from oldest transactions first
     let remainingToSpend = pointsToSpend;
     const payerSpending: Map<string, number> = new Map();
 
@@ -102,14 +99,13 @@ export class PointsService {
   }
 
   getBalances(): Record<string, number> {
-    const balances: Record<string, number> = {};
-
-    for (const transaction of this.transactions) {
-      const payer = transaction.payer;
-      balances[payer] = (balances[payer] || 0) + transaction.points;
-    }
-
-    return balances;
+    return this.transactions.reduce(
+      (balances, { payer, points }) => {
+        balances[payer] = (balances[payer] || 0) + points;
+        return balances;
+      },
+      {} as Record<string, number>,
+    );
   }
 
   private getTotalPoints(): number {

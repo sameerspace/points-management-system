@@ -19,15 +19,40 @@ Before running this application, make sure you have the following installed:
 npm install
 ```
 
-## Running the Application
+## Running the Application Locally
 
-Start the development server:
+Start the development server (with hot reload):
 
 ```bash
 npm run start:dev
 ```
 
-The server will start on `http://localhost:3000`
+Or start the production build locally:
+
+```bash
+npm run build
+npm run start:prod
+```
+
+The server will start on `http://localhost:3000`.
+
+## Running the Application with Docker
+
+### Build the Docker image
+
+From the project root:
+
+```bash
+docker build -t points-management-system .
+```
+
+### Run the container
+
+```bash
+docker run -p 3000:3000 --name points-app points-management-system
+```
+
+The API will be available at `http://localhost:3000` and Swagger docs at `http://localhost:3000/api`.
 
 ## API Endpoints
 
